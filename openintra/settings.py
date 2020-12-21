@@ -93,7 +93,6 @@ DATABASES = {
 }
 
 # Auth user model
-
 AUTH_USER_MODEL = 'usermgt.User'
 
 # Password validation
