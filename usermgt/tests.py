@@ -68,7 +68,6 @@ class UserEndpointTests(APITestCase):
         self.assertEqual(response.data['email'], user.email)
 
     # POST user/
-    @tag('current')
     def test_createUser(self):
         # data to send to the server
         postData = {
@@ -93,8 +92,53 @@ class UserEndpointTests(APITestCase):
 
     # PUT user/xxx/
     def test_updateUser(self):
-        self.fail()
+        # sample data
+        user = createUser(1)
+        user.role = 'Engineer'
+        user.department = 'QA Department'
+        user.save()
+
+        # data to send to the server
+        putData = {
+            'username': user.username,
+            'email': user.email,
+            'role': 'Manager',
+            'department': 'Enterprise Applications Department'
+        }
+
+        # Unauthenticated request
+        url = reverse('user-detail', args=[user.username])
+        response = self.client.put(url, putData, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Authenticated request
+        self.createUserAndLogin()
+        response = self.client.put(url, putData, format='json')
+        # Get the updated user object
+        userFromDb = User.objects.get(username=user.username)
+        # Verify that userFromDb was updated
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(userFromDb.role, putData['role'])
+        self.assertEqual(userFromDb.department, putData['department'])
 
     # DELETE user/xxx/
     def test_deleteUser(self):
-        self.fail()
+        # sample data
+        user1 = createUser(1)
+        user2 = createUser(2)
+
+        # Unauthenticated request
+        url = reverse('user-detail', args=[user1.username])
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Authenticated request, should return 204
+        self.createUserAndLogin()
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        # Get users from database. There should be 2 left.
+        users = User.objects.all()
+        self.assertEqual(users.count(), 2)
+        # Verify that the correct one was deleted
+        usernames = [user.username for user in users]
+        self.assertNotIn(user1.username, usernames)
