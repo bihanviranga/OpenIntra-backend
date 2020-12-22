@@ -33,7 +33,6 @@ class UserEndpointTests(APITestCase):
         self.client.credentials()
 
     # GET user/
-    @tag('current')
     def test_retrieveUsers(self):
         # Populate the database with sample data
         createUser(1)
@@ -52,11 +51,45 @@ class UserEndpointTests(APITestCase):
 
     # GET user/xxx/
     def test_retrieveOneUser(self):
-        self.fail()
+        # Populate the database with sample data
+        user = createUser(1)
+
+        # Unauthenticated request
+        url = reverse('user-detail', args=[user.username])
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Authenticated request
+        self.createUserAndLogin()
+        response = self.client.get(url, format='json')
+        # 200 status code and proper response content
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], user.username)
+        self.assertEqual(response.data['email'], user.email)
 
     # POST user/
+    @tag('current')
     def test_createUser(self):
-        self.fail()
+        # data to send to the server
+        postData = {
+            'username': 'XX_USERNAME_XX',
+            'password': 'XX_PASSWORD_XX',
+            'email': 'xx_email_xx@email.com'
+        }
+
+        # Unauthenticated request
+        url = reverse('user-list')
+        response = self.client.post(url, postData, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Authenticated request
+        self.createUserAndLogin()
+        response = self.client.post(url, postData, format='json')
+        # Retrieve created user from DB
+        user = User.objects.filter(username=postData['username'])[0]
+        # 201 status code, and the created user has correct values set.
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(user.username, postData['username'])
 
     # PUT user/xxx/
     def test_updateUser(self):
